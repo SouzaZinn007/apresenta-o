@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tempo de Permanência VW — TCM Logística</title>
+<style>
+:root{
+  --azul:#0B2545;
+  --azul2:#13386B;
+  --vermelho:#C8102E;
+  --cinza:#EDEFF2;
+  --cinza2:#D5D9DF;
+  --txt:#2A2F36;
+  --branco:#FFFFFF;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+  background:var(--branco);color:var(--txt);
+}
+#deck{height:100vh;width:100vw;position:relative}
+.slide{
+  position:absolute;inset:0;height:100vh;width:100vw;
+  padding:3.2vh 4vw 8vh;
+  display:none;flex-direction:column;
+  opacity:0;transform:translateY(18px);
+  transition:opacity .45s ease,transform .45s ease;
+}
+.slide.active{display:flex;opacity:1;transform:none}
+
+/* ---------- header ---------- */
+.head{display:flex;align-items:flex-end;justify-content:space-between;
+  border-bottom:3px solid var(--azul);padding-bottom:1.1vh;margin-bottom:2.4vh;flex-shrink:0}
+.head h1{font-size:clamp(19px,2.5vh,32px);color:var(--azul);font-weight:700;letter-spacing:-.4px}
+.head h1 span{color:var(--vermelho)}
+.head .sub{font-size:clamp(10px,1.3vh,14px);color:#6C757D;margin-top:.4vh;font-weight:500}
+.tag{background:var(--vermelho);color:#fff;font-size:clamp(9px,1.2vh,12px);
+  padding:.5vh 1.1vw;border-radius:3px;font-weight:600;letter-spacing:.5px;white-space:nowrap}
+
+/* ---------- capa ---------- */
+.cover{justify-content:center;align-items:flex-start;padding:0 8vw;background:var(--branco)}
+.cover .bar{width:90px;height:7px;background:var(--vermelho);margin-bottom:3.5vh}
+.cover h1{font-size:clamp(34px,7vh,86px);color:var(--azul);line-height:1.02;font-weight:800;letter-spacing:-2px}
+.cover h1 em{font-style:normal;color:var(--vermelho)}
+.cover h2{font-size:clamp(15px,2.4vh,28px);color:#5A6472;font-weight:400;margin-top:2.5vh;max-width:70%}
+.cover .meta{margin-top:5vh;display:flex;gap:3vw;flex-wrap:wrap}
+.cover .meta div{border-left:3px solid var(--cinza2);padding-left:1.1vw}
+.cover .meta b{display:block;font-size:clamp(16px,2.6vh,30px);color:var(--azul);font-weight:700}
+.cover .meta small{font-size:clamp(9px,1.3vh,13px);color:#7A828D;text-transform:uppercase;letter-spacing:1px}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4vw;margin-bottom:2.4vh;flex-shrink:0}
+.kpi{background:var(--cinza);border-radius:6px;padding:2.2vh 1.4vw;border-top:4px solid var(--azul);position:relative}
+.kpi.red{border-top-color:var(--vermelho)}
+.kpi .v{font-size:clamp(26px,5.2vh,54px);font-weight:800;color:var(--azul);line-height:1;letter-spacing:-1.5px}
+.kpi.red .v{color:var(--vermelho)}
+.kpi .v small{font-size:clamp(12px,1.8vh,20px);font-weight:600;margin-left:2px}
+.kpi .l{font-size:clamp(10px,1.35vh,14px);color:#5A6472;margin-top:1vh;font-weight:600;line-height:1.35}
+.kpi .d{font-size:clamp(9px,1.15vh,12px);color:#8A929C;margin-top:.5vh}
+
+.body{flex:1;display:flex;gap:1.8vw;min-height:0}
+.card{background:var(--branco);border:1px solid var(--cinza2);border-radius:6px;
+  padding:2vh 1.4vw;display:flex;flex-direction:column;min-height:0;flex:1}
+.card h3{font-size:clamp(11px,1.5vh,16px);color:var(--azul);font-weight:700;
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:.5vh;flex-shrink:0}
+.card .hint{font-size:clamp(9px,1.15vh,12px);color:#8A929C;margin-bottom:1.6vh;flex-shrink:0}
+.chart{flex:1;min-height:0;position:relative}
+canvas{width:100%;height:100%;display:block}
+
+/* ---------- barras horizontais ---------- */
+.hbars{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:.4vh;min-height:0}
+.hbar{display:grid;grid-template-columns:11.5vw 1fr 4.2vw;align-items:center;gap:.7vw}
+.hbar .n{font-size:clamp(9px,1.25vh,13px);color:var(--txt);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.hbar .t{background:var(--cinza);height:1.9vh;border-radius:2px;overflow:hidden}
+.hbar .f{height:100%;background:var(--azul2);width:0;transition:width .9s cubic-bezier(.2,.8,.2,1);border-radius:2px}
+.hbar.alert .f{background:var(--vermelho)}
+.hbar .val{font-size:clamp(9px,1.25vh,13px);font-weight:700;color:var(--azul);text-align:right}
+.hbar.alert .val{color:var(--vermelho)}
+
+/* ---------- tabela ---------- */
+table{width:100%;border-collapse:collapse;font-size:clamp(9px,1.3vh,13px)}
+th{background:var(--azul);color:#fff;text-align:left;padding:1.1vh .8vw;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;font-size:clamp(8px,1.1vh,11px)}
+td{padding:1vh .8vw;border-bottom:1px solid var(--cinza)}
+tr:nth-child(even) td{background:#FAFBFC}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+td.crit{color:var(--vermelho);font-weight:700}
+
+/* ---------- insights ---------- */
+.ins{display:flex;flex-direction:column;gap:1.5vh;flex:1;justify-content:center}
+.ibox{display:flex;gap:1.2vw;align-items:flex-start;background:var(--cinza);
+  padding:2vh 1.5vw;border-radius:6px;border-left:5px solid var(--azul)}
+.ibox.red{border-left-color:var(--vermelho)}
+.ibox .num{font-size:clamp(20px,3.4vh,38px);font-weight:800;color:var(--azul);
+  line-height:1;min-width:5.5vw;letter-spacing:-1px}
+.ibox.red .num{color:var(--vermelho)}
+.ibox .tx b{display:block;font-size:clamp(11px,1.6vh,17px);color:var(--azul);margin-bottom:.5vh}
+.ibox .tx p{font-size:clamp(9px,1.3vh,14px);color:#4E5761;line-height:1.5}
+
+/* ---------- footer / nav ---------- */
+.foot{position:absolute;bottom:0;left:0;right:0;height:6vh;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 4vw;border-top:1px solid var(--cinza2);background:var(--branco)}
+.foot .brand{font-size:clamp(9px,1.2vh,12px);color:#8A929C;letter-spacing:1px;font-weight:600}
+.foot .brand b{color:var(--azul)}
+.nav{display:flex;align-items:center;gap:1vw}
+.nav button{background:var(--azul);color:#fff;border:0;width:3.6vh;height:3.6vh;
+  border-radius:4px;cursor:pointer;font-size:clamp(11px,1.6vh,16px);transition:.2s;line-height:1}
+.nav button:hover{background:var(--vermelho)}
+.nav button:disabled{background:var(--cinza2);cursor:default}
+.dots{display:flex;gap:.45vw}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--cinza2);cursor:pointer;transition:.25s}
+.dot.on{background:var(--vermelho);width:22px;border-radius:4px}
+.pg{font-size:clamp(9px,1.2vh,12px);color:#8A929C;font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
+.prog{position:absolute;top:0;left:0;height:3px;background:var(--vermelho);transition:width .4s;z-index:10}
+@media(max-width:820px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .body{flex-direction:column}
+  .hbar{grid-template-columns:26vw 1fr 11vw}
+}
+</style>
+</head>
+<body>
+<div class="prog" id="prog"></div>
+<div id="deck">
+
+<!-- 1 CAPA -->
+<section class="slide cover active">
+  <div class="bar"></div>
+  <h1>Tempo de<br>Permanência<br><em>Volkswagen</em></h1>
+  <h2>Análise de retenção de veículos entre a chegada no gate e a saída da fábrica</h2>
+  <div class="meta">
+    <div><small>Período</small><b>01/07 a 24/07/2026</b></div>
+    <div><small>Viagens analisadas</small><b>1.195</b></div>
+    <div><small>Operação</small><b>TCM Logística</b></div>
+    <div><small>Planta</small><b>VW Resende</b></div>
+  </div>
+</section>
+
+<!-- 2 PANORAMA -->
+<section class="slide">
+  <div class="head">
+    <div><h1>Panorama <span>Geral</span></h1><div class="sub">Chegada no gate VW → Saída da VW</div></div>
+    <div class="tag">1.195 VIAGENS VÁLIDAS</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="v">1.195</div><div class="l">Veículos que permaneceram na VW</div><div class="d">de 1.439 registros totais</div></div>
+    <div class="kpi red"><div class="v">7,98<small>h</small></div><div class="l">Média de permanência</div><div class="d">≈ 7h59min por veículo</div></div>
+    <div class="kpi"><div class="v">6,27<small>h</small></div><div class="l">Mediana de permanência</div><div class="d">metade sai em até 6h16</div></div>
+    <div class="kpi red"><div class="v">9.542<small>h</small></div><div class="l">Total de horas retidas no período</div><div class="d">≈ 398 dias de veículo parado</div></div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <h3>Composição do tempo total</h3>
+      <div class="hint">Onde o veículo passa as horas dentro do ciclo VW</div>
+      <div class="hbars">
+        <div class="hbar" data-w="34"><div class="n">Gate → Entrada VW</div><div class="t"><div class="f"></div></div><div class="val">2,73h</div></div>
+        <div class="hbar alert" data-w="66"><div class="n">Entrada → Saída VW</div><div class="t"><div class="f"></div></div><div class="val">5,30h</div></div>
+        <div class="hbar" data-w="100"><div class="n"><b>Ciclo total</b></div><div class="t"><div class="f"></div></div><div class="val">7,98h</div></div>
+      </div>
+      <div class="hint" style="margin-top:1.5vh;margin-bottom:0">
+        <b style="color:var(--vermelho)">66%</b> do tempo é consumido já dentro da planta (descarga/pátio) — o gate responde por 34%.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Distribuição por faixa de horas</h3>
+      <div class="hint">Quantidade de veículos em cada faixa de retenção</div>
+      <div class="chart"><canvas id="cFaixa"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 RETENÇÃO -->
+<section class="slide">
+  <div class="head">
+    <div><h1>Veículos <span>Retidos</span></h1><div class="sub">Volume acima dos limiares de permanência</div></div>
+    <div class="tag">FOCO EM DEMURRAGE</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="v">790</div><div class="l">Até 8h de permanência</div><div class="d">66,1% da frota — dentro do esperado</div></div>
+    <div class="kpi red"><div class="v">403</div><div class="l">Retidos acima de 8h</div><div class="d">33,7% do total de viagens</div></div>
+    <div class="kpi red"><div class="v">158</div><div class="l">Retidos acima de 12h</div><div class="d">13,2% — mais de meio turno parado</div></div>
+    <div class="kpi red"><div class="v">45</div><div class="l">Retidos acima de 24h</div><div class="d">3,8% — veículo perde o dia inteiro</div></div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <h3>Faixas de retenção</h3>
+      <div class="hint">Participação de cada faixa sobre 1.195 viagens</div>
+      <div class="hbars">
+        <div class="hbar" data-w="47"><div class="n">0 – 4 horas</div><div class="t"><div class="f"></div></div><div class="val">254</div></div>
+        <div class="hbar" data-w="100"><div class="n">4 – 8 horas</div><div class="t"><div class="f"></div></div><div class="val">536</div></div>
+        <div class="hbar alert" data-w="46"><div class="n">8 – 12 horas</div><div class="t"><div class="f"></div></div><div class="val">245</div></div>
+        <div class="hbar alert" data-w="21"><div class="n">12 – 24 horas</div><div class="t"><div class="f"></div></div><div class="val">115</div></div>
+        <div class="hbar alert" data-w="8"><div class="n">Acima de 24 horas</div><div class="t"><div class="f"></div></div><div class="val">45</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Maiores permanências do período</h3>
+      <div class="hint">Casos críticos registrados</div>
+      <table>
+        <tr><th>Placa</th><th>Fornecedor</th><th style="text-align:right">Horas</th></tr>
+        <tr><td>HJZ4E33</td><td>GRAMMER DO BRASIL</td><td class="num crit">68,8</td></tr>
+        <tr><td>IWK6I79</td><td>GRAMMER DO BRASIL</td><td class="num crit">63,7</td></tr>
+        <tr><td>IWK5J90</td><td>DANA EIXOS TRASEIRO</td><td class="num crit">60,4</td></tr>
+        <tr><td>RVX1C59</td><td>FPT</td><td class="num crit">50,3</td></tr>
+        <tr><td>ECM7G88</td><td>METALÚRGICA RIGITEC</td><td class="num crit">47,4</td></tr>
+        <tr><td>BSX6A61</td><td>GRAMMER DO BRASIL</td><td class="num crit">47,2</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 4 EVOLUÇÃO -->
+<section class="slide">
+  <div class="head">
+    <div><h1>Evolução <span>Diária</span></h1><div class="sub">Média de horas de permanência por dia de chegada</div></div>
+    <div class="tag">JULHO / 2026</div>
+  </div>
+  <div class="body" style="flex-direction:column">
+    <div class="card" style="flex:1.6">
+      <h3>Média de permanência por dia</h3>
+      <div class="hint">Linha vermelha tracejada = média geral do período (7,98h)</div>
+      <div class="chart"><canvas id="cDia"></canvas></div>
+    </div>
+    <div class="card" style="flex:1">
+      <h3>Média de permanência por hora de chegada no gate</h3>
+      <div class="hint">Chegadas na madrugada e no fim da noite têm as maiores retenções</div>
+      <div class="chart"><canvas id="cHora"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 TIPO / FORNECEDOR -->
+<section class="slide">
+  <div class="head">
+    <div><h1>Onde está o <span>Tempo Parado</span></h1><div class="sub">Recortes por tipo de veículo e por fornecedor</div></div>
+    <div class="tag">AMOSTRAS ≥ 10 VIAGENS</div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <h3>Média por tipo de veículo</h3>
+      <div class="hint">Horas médias · (n) viagens</div>
+      <div class="hbars">
+        <div class="hbar alert" data-w="100"><div class="n">Carreta Rebaixada 3 Eixos (17)</div><div class="t"><div class="f"></div></div><div class="val">13,4</div></div>
+        <div class="hbar alert" data-w="90"><div class="n">Carreta Vanderleia (66)</div><div class="t"><div class="f"></div></div><div class="val">12,0</div></div>
+        <div class="hbar alert" data-w="76"><div class="n">Carreta 2 Eixos Rebaixada (203)</div><div class="t"><div class="f"></div></div><div class="val">10,2</div></div>
+        <div class="hbar alert" data-w="75"><div class="n">Carreta 3 Eixos Reta (31)</div><div class="t"><div class="f"></div></div><div class="val">10,1</div></div>
+        <div class="hbar" data-w="64"><div class="n">Carreta 2 Eixos Reta (113)</div><div class="t"><div class="f"></div></div><div class="val">8,5</div></div>
+        <div class="hbar" data-w="62"><div class="n">Carreta Reta 2 Eixos (55)</div><div class="t"><div class="f"></div></div><div class="val">8,3</div></div>
+        <div class="hbar" data-w="55"><div class="n">Carreta 3 Eixos Rebaixada (52)</div><div class="t"><div class="f"></div></div><div class="val">7,3</div></div>
+        <div class="hbar" data-w="51"><div class="n">Carreta Rebaixada 2 Eixos (199)</div><div class="t"><div class="f"></div></div><div class="val">6,8</div></div>
+        <div class="hbar" data-w="49"><div class="n">Carreta Reta 3 Eixos (141)</div><div class="t"><div class="f"></div></div><div class="val">6,6</div></div>
+        <div class="hbar" data-w="49"><div class="n">Truck (230)</div><div class="t"><div class="f"></div></div><div class="val">6,5</div></div>
+        <div class="hbar" data-w="42"><div class="n">Toco (55)</div><div class="t"><div class="f"></div></div><div class="val">5,6</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Top 10 fornecedores por permanência</h3>
+      <div class="hint">Média de horas do veículo na VW · (n) viagens</div>
+      <div class="hbars">
+        <div class="hbar alert" data-w="100"><div class="n">FPT (16)</div><div class="t"><div class="f"></div></div><div class="val">13,7</div></div>
+        <div class="hbar alert" data-w="98"><div class="n">Valeo Embreagens (14)</div><div class="t"><div class="f"></div></div><div class="val">13,3</div></div>
+        <div class="hbar alert" data-w="95"><div class="n">Valeo Limpadores (15)</div><div class="t"><div class="f"></div></div><div class="val">13,0</div></div>
+        <div class="hbar alert" data-w="95"><div class="n">Metalúrgica Rigitec (15)</div><div class="t"><div class="f"></div></div><div class="val">13,0</div></div>
+        <div class="hbar alert" data-w="87"><div class="n">Kromberg e Schubert (16)</div><div class="t"><div class="f"></div></div><div class="val">11,9</div></div>
+        <div class="hbar alert" data-w="86"><div class="n">Dana Eixos Dianteiro (65)</div><div class="t"><div class="f"></div></div><div class="val">11,7</div></div>
+        <div class="hbar alert" data-w="84"><div class="n">Dana Eixos Traseiro (29)</div><div class="t"><div class="f"></div></div><div class="val">11,5</div></div>
+        <div class="hbar alert" data-w="84"><div class="n">Grammer do Brasil (82)</div><div class="t"><div class="f"></div></div><div class="val">11,5</div></div>
+        <div class="hbar" data-w="78"><div class="n">Knorr Bremse (32)</div><div class="t"><div class="f"></div></div><div class="val">10,7</div></div>
+        <div class="hbar" data-w="75"><div class="n">ZF Araraquara (15)</div><div class="t"><div class="f"></div></div><div class="val">10,3</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 CONCLUSÕES -->
+<section class="slide">
+  <div class="head">
+    <div><h1>Leitura e <span>Próximos Passos</span></h1><div class="sub">Conclusões da análise de permanência na VW</div></div>
+    <div class="tag">PLANO DE AÇÃO</div>
+  </div>
+  <div class="body">
+    <div class="card" style="flex:1.15">
+      <h3>Principais achados</h3>
+      <div class="ins">
+        <div class="ibox"><div class="num">7,98h</div><div class="tx"><b>Média de permanência por veículo</b><p>Considerando chegada no gate até a saída da VW, em 1.195 viagens. A mediana de 6,27h mostra que a média é puxada por uma cauda de casos extremos.</p></div></div>
+        <div class="ibox red"><div class="num">403</div><div class="tx"><b>Veículos retidos acima de 8 horas</b><p>Um terço da operação ultrapassa a jornada de referência; 45 veículos passaram de 24h, imobilizando ativo e motorista por mais de um dia.</p></div></div>
+        <div class="ibox red"><div class="num">66%</div><div class="tx"><b>Do tempo é gasto dentro da planta</b><p>Entrada→Saída consome 5,30h contra 2,73h de gate. A prioridade de ganho está na agilidade de descarga e no giro de docas, não apenas no portão.</p></div></div>
+        <div class="ibox"><div class="num">9.542h</div><div class="tx"><b>Horas totais paradas no mês</b><p>Equivalente a cerca de 398 dias de veículo imobilizado — base direta para negociação de demurrage e redimensionamento de frota.</p></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recomendações</h3>
+      <div class="ins">
+        <div class="ibox"><div class="num">01</div><div class="tx"><b>Agendamento por doca</b><p>Concentrar janelas nos horários de menor retenção (04h–09h, média ~6,5h) e reduzir chegadas na madrugada e após 21h, onde a média sobe para 10h–14h.</p></div></div>
+        <div class="ibox red"><div class="num">02</div><div class="tx"><b>Plano dedicado para carretas rebaixadas</b><p>Rebaixadas e Vanderleia ficam de 10h a 13,4h — quase o dobro do Truck. Avaliar doca específica e sequência de descarga para esses perfis.</p></div></div>
+        <div class="ibox red"><div class="num">03</div><div class="tx"><b>Tratativa com fornecedores críticos</b><p>Grammer, Dana, Valeo, FPT e Rigitec concentram as maiores médias e os piores casos. Alinhar conferência e paletização na origem.</p></div></div>
+        <div class="ibox"><div class="num">04</div><div class="tx"><b>Monitoramento contínuo</b><p>Publicar este indicador semanalmente com meta de permanência média ≤ 6h e teto de 5% de veículos acima de 12h.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="foot">
+  <div class="brand"><b>TCM LOGÍSTICA</b> &nbsp;|&nbsp; TEMPO DE PERMANÊNCIA VW &nbsp;|&nbsp; JUL/2026</div>
+  <div class="nav">
+    <button id="prev">‹</button>
+    <div class="dots" id="dots"></div>
+    <button id="next">›</button>
+    <div class="pg" id="pg">1 / 6</div>
+  </div>
+</div>
+
+<script>
+const A='#0B2545',A2='#13386B',R='#C8102E',C='#EDEFF2',C2='#D5D9DF',G='#7A828D';
+const slides=[...document.querySelectorAll('.slide')];
+const dots=document.getElementById('dots');
+let i=0, drawn={};
+
+slides.forEach((_,k)=>{
+  const d=document.createElement('div');d.className='dot'+(k?'':' on');
+  d.onclick=()=>go(k);dots.appendChild(d);
+});
+
+function go(n){
+  if(n<0||n>=slides.length)return;
+  slides[i].classList.remove('active');
+  i=n;
+  slides[i].classList.add('active');
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===i));
+  document.getElementById('pg').textContent=(i+1)+' / '+slides.length;
+  document.getElementById('prog').style.width=((i+1)/slides.length*100)+'%';
+  document.getElementById('prev').disabled=i===0;
+  document.getElementById('next').disabled=i===slides.length-1;
+  animate();
+}
+document.getElementById('prev').onclick=()=>go(i-1);
+document.getElementById('next').onclick=()=>go(i+1);
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(i+1)}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1)}
+  if(e.key==='Home')go(0); if(e.key==='End')go(slides.length-1);
+});
+
+function animate(){
+  slides[i].querySelectorAll('.hbar').forEach((b,k)=>{
+    const f=b.querySelector('.f'); f.style.width='0';
+    setTimeout(()=>f.style.width=b.dataset.w+'%',80+k*55);
+  });
+  if(i===1&&!drawn[1]){drawn[1]=1;setTimeout(faixa,120)}
+  if(i===3&&!drawn[3]){drawn[3]=1;setTimeout(()=>{dia();hora()},120)}
+}
+
+function ctx(id){
+  const c=document.getElementById(id),r=c.getBoundingClientRect(),p=window.devicePixelRatio||1;
+  c.width=r.width*p;c.height=r.height*p;
+  const x=c.getContext('2d');x.scale(p,p);
+  return[x,r.width,r.height];
+}
+function txt(x,t,px,col,al='center'){x.font='600 '+px+'px Segoe UI,Arial';x.fillStyle=col;x.textAlign=al}
+
+/* ---- gráfico de barras verticais: faixas ---- */
+function faixa(){
+  const[x,W,H]=ctx('cFaixa');
+  const d=[['0-4h',254],['4-8h',536],['8-12h',245],['12-24h',115],['+24h',45]];
+  const mx=560,pl=42,pb=30,pt=22,gw=W-pl-14,gh=H-pb-pt;
+  x.strokeStyle=C2;x.lineWidth=1;
+  for(let g=0;g<=4;g++){const y=pt+gh-gh*g/4;
+    x.beginPath();x.moveTo(pl,y);x.lineTo(W-14,y);x.stroke();
+    txt(x,'',0,'','right');x.font='500 10px Segoe UI,Arial';x.fillStyle=G;x.textAlign='right';
+    x.fillText(Math.round(mx*g/4),pl-8,y+3);}
+  const bw=gw/d.length*.55;
+  d.forEach((it,k)=>{
+    const cx=pl+gw/d.length*(k+.5),h=gh*it[1]/mx;
+    x.fillStyle=k>=2?R:A2;
+    x.fillRect(cx-bw/2,pt+gh-h,bw,h);
+    x.font='700 13px Segoe UI,Arial';x.fillStyle=k>=2?R:A;x.textAlign='center';
+    x.fillText(it[1],cx,pt+gh-h-7);
+    x.font='600 11px Segoe UI,Arial';x.fillStyle=G;
+    x.fillText(it[0],cx,H-10);
+  });
+}
+
+/* ---- linha: média por dia ---- */
+function dia(){
+  const[x,W,H]=ctx('cDia');
+  const d=[['01',7.84],['02',7.18],['03',8.26],['04',16.85],['06',8.89],['07',8.08],['08',6.76],['09',7.86],['10',5.91],['11',4.07],['13',7.21],['14',7.14],['15',9.70],['16',8.55],['17',8.82],['18',12.06],['20',9.09],['21',7.83],['22',7.15],['23',6.71],['24',2.85]];
+  const mx=18,pl=34,pb=26,pt=16,gw=W-pl-12,gh=H-pb-pt;
+  x.strokeStyle=C2;x.lineWidth=1;
+  for(let g=0;g<=3;g++){const y=pt+gh-gh*g/3;
+    x.beginPath();x.moveTo(pl,y);x.lineTo(W-12,y);x.stroke();
+    x.font='500 10px Segoe UI,Arial';x.fillStyle=G;x.textAlign='right';
+    x.fillText((mx*g/3).toFixed(0)+'h',pl-7,y+3);}
+  const px=k=>pl+gw*k/(d.length-1), py=v=>pt+gh-gh*v/mx;
+  // média
+  x.setLineDash([5,4]);x.strokeStyle=R;x.lineWidth=1.5;
+  x.beginPath();x.moveTo(pl,py(7.98));x.lineTo(W-12,py(7.98));x.stroke();x.setLineDash([]);
+  // área
+  const gr=x.createLinearGradient(0,pt,0,pt+gh);
+  gr.addColorStop(0,'rgba(19,56,107,.22)');gr.addColorStop(1,'rgba(19,56,107,0)');
+  x.beginPath();x.moveTo(px(0),py(d[0][1]));
+  d.forEach((it,k)=>x.lineTo(px(k),py(it[1])));
+  x.lineTo(px(d.length-1),pt+gh);x.lineTo(px(0),pt+gh);x.closePath();x.fillStyle=gr;x.fill();
+  // linha
+  x.beginPath();d.forEach((it,k)=>k?x.lineTo(px(k),py(it[1])):x.moveTo(px(k),py(it[1])));
+  x.strokeStyle=A;x.lineWidth=2.4;x.stroke();
+  d.forEach((it,k)=>{
+    const cr=it[1]>10;
+    x.beginPath();x.arc(px(k),py(it[1]),cr?4.5:3,0,7);x.fillStyle=cr?R:A;x.fill();
+    x.strokeStyle='#fff';x.lineWidth=1.5;x.stroke();
+    if(cr){x.font='700 10px Segoe UI,Arial';x.fillStyle=R;x.textAlign='center';
+      x.fillText(it[1].toFixed(1),px(k),py(it[1])-10);}
+    if(k%2===0){x.font='500 9px Segoe UI,Arial';x.fillStyle=G;x.textAlign='center';
+      x.fillText(it[0],px(k),H-9);}
+  });
+}
+
+/* ---- barras: média por hora de chegada ---- */
+function hora(){
+  const[x,W,H]=ctx('cHora');
+  const d=[14.06,10.26,12.13,8.72,5.75,6.04,7.43,6.89,6.75,6.63,7.91,9.54,8.36,9.31,8.66,7.61,7.11,7.30,8.03,7.72,6.32,10.31,10.40,8.68];
+  const mx=15,pl=30,pb=24,pt=12,gw=W-pl-10,gh=H-pb-pt;
+  x.strokeStyle=C2;x.lineWidth=1;
+  x.beginPath();x.moveTo(pl,pt+gh);x.lineTo(W-10,pt+gh);x.stroke();
+  x.setLineDash([4,4]);x.strokeStyle=R;
+  x.beginPath();x.moveTo(pl,pt+gh-gh*7.98/mx);x.lineTo(W-10,pt+gh-gh*7.98/mx);x.stroke();x.setLineDash([]);
+  x.font='500 10px Segoe UI,Arial';x.fillStyle=G;x.textAlign='right';
+  x.fillText('8h',pl-6,pt+gh-gh*7.98/mx+3);
+  const bw=gw/24*.62;
+  d.forEach((v,k)=>{
+    const cx=pl+gw/24*(k+.5),h=gh*v/mx;
+    x.fillStyle=v>9?R:A2;
+    x.fillRect(cx-bw/2,pt+gh-h,bw,h);
+    x.font='500 9px Segoe UI,Arial';x.fillStyle=G;x.textAlign='center';
+    if(k%3===0)x.fillText(k+'h',cx,H-8);
+  });
+}
+
+window.addEventListener('resize',()=>{drawn={};if(i===1)faixa();if(i===3){dia();hora()}});
+go(0);
+</script>
+</body>
+</html>
