@@ -15,20 +15,27 @@
   --branco:#FFFFFF;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden}
+html{scroll-behavior:smooth}
 body{
   font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;
   background:var(--branco);color:var(--txt);
 }
-#deck{height:100vh;width:100vw;position:relative}
-.slide{
-  position:absolute;inset:0;height:100vh;width:100vw;
-  padding:3.2vh 4vw 8vh;
-  display:none;flex-direction:column;
-  opacity:0;transform:translateY(18px);
-  transition:opacity .45s ease,transform .45s ease;
+#deck{
+  height:100vh;width:100vw;
+  overflow-y:scroll;overflow-x:hidden;
+  scroll-snap-type:y mandatory;
+  scrollbar-width:none;-ms-overflow-style:none;
 }
-.slide.active{display:flex;opacity:1;transform:none}
+#deck::-webkit-scrollbar{display:none}
+.slide{
+  height:100vh;width:100%;
+  scroll-snap-align:start;scroll-snap-stop:always;
+  padding:3.2vh 4vw 8vh;
+  display:flex;flex-direction:column;
+  opacity:0;transform:translateY(26px);
+  transition:opacity .6s ease,transform .6s ease;
+}
+.slide.active{opacity:1;transform:none}
 
 /* ---------- header ---------- */
 .head{display:flex;align-items:flex-end;justify-content:space-between;
@@ -100,31 +107,53 @@ td.crit{color:var(--vermelho);font-weight:700}
 .ibox .tx b{display:block;font-size:clamp(11px,1.6vh,17px);color:var(--azul);margin-bottom:.5vh}
 .ibox .tx p{font-size:clamp(9px,1.3vh,14px);color:#4E5761;line-height:1.5}
 
-/* ---------- footer / nav ---------- */
-.foot{position:absolute;bottom:0;left:0;right:0;height:6vh;
+/* ---------- footer fixo ---------- */
+.foot{position:fixed;bottom:0;left:0;right:0;height:6vh;z-index:20;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 4vw;border-top:1px solid var(--cinza2);background:var(--branco)}
 .foot .brand{font-size:clamp(9px,1.2vh,12px);color:#8A929C;letter-spacing:1px;font-weight:600}
 .foot .brand b{color:var(--azul)}
-.nav{display:flex;align-items:center;gap:1vw}
-.nav button{background:var(--azul);color:#fff;border:0;width:3.6vh;height:3.6vh;
-  border-radius:4px;cursor:pointer;font-size:clamp(11px,1.6vh,16px);transition:.2s;line-height:1}
-.nav button:hover{background:var(--vermelho)}
-.nav button:disabled{background:var(--cinza2);cursor:default}
-.dots{display:flex;gap:.45vw}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--cinza2);cursor:pointer;transition:.25s}
-.dot.on{background:var(--vermelho);width:22px;border-radius:4px}
-.pg{font-size:clamp(9px,1.2vh,12px);color:#8A929C;font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
-.prog{position:absolute;top:0;left:0;height:3px;background:var(--vermelho);transition:width .4s;z-index:10}
+.pg{font-size:clamp(9px,1.2vh,12px);color:#8A929C;font-variant-numeric:tabular-nums}
+.pg b{color:var(--vermelho);font-size:clamp(11px,1.5vh,15px)}
+
+/* barra de progresso do scroll */
+.prog{position:fixed;top:0;left:0;height:3px;width:0;background:var(--vermelho);z-index:30;transition:width .15s linear}
+
+/* indicador lateral de slides */
+.rail{position:fixed;right:1.6vw;top:50%;transform:translateY(-50%);z-index:20;
+  display:flex;flex-direction:column;gap:1.1vh;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--cinza2);
+  cursor:pointer;transition:.3s;border:0;padding:0}
+.dot:hover{background:var(--azul2)}
+.dot.on{background:var(--vermelho);height:26px;border-radius:5px}
+
+/* seta "role para baixo" */
+.scrollcue{position:fixed;bottom:8vh;left:50%;transform:translateX(-50%);z-index:20;
+  display:flex;flex-direction:column;align-items:center;gap:.7vh;
+  color:#8A929C;font-size:clamp(9px,1.2vh,12px);font-weight:600;
+  letter-spacing:1.5px;text-transform:uppercase;pointer-events:none;
+  transition:opacity .4s}
+.scrollcue.hide{opacity:0}
+.scrollcue svg{animation:bob 1.7s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
 @media(max-width:820px){
   .kpis{grid-template-columns:repeat(2,1fr)}
   .body{flex-direction:column}
   .hbar{grid-template-columns:26vw 1fr 11vw}
+  .rail{display:none}
 }
 </style>
 </head>
 <body>
 <div class="prog" id="prog"></div>
+<div class="rail" id="rail"></div>
+<div class="scrollcue" id="cue">
+  <span>Role para baixo</span>
+  <svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+    <path d="M2 2 L10 10 L18 2" stroke="#C8102E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</div>
 <div id="deck">
 
 <!-- 1 CAPA -->
@@ -308,52 +337,68 @@ td.crit{color:var(--vermelho);font-weight:700}
 
 <div class="foot">
   <div class="brand"><b>TCM LOGÍSTICA</b> &nbsp;|&nbsp; TEMPO DE PERMANÊNCIA VW &nbsp;|&nbsp; JUL/2026</div>
-  <div class="nav">
-    <button id="prev">‹</button>
-    <div class="dots" id="dots"></div>
-    <button id="next">›</button>
-    <div class="pg" id="pg">1 / 6</div>
-  </div>
+  <div class="pg" id="pg"><b>01</b> / 06</div>
 </div>
 
 <script>
 const A='#0B2545',A2='#13386B',R='#C8102E',C='#EDEFF2',C2='#D5D9DF',G='#7A828D';
+const deck=document.getElementById('deck');
 const slides=[...document.querySelectorAll('.slide')];
-const dots=document.getElementById('dots');
+const rail=document.getElementById('rail');
+const cue=document.getElementById('cue');
+const pg=document.getElementById('pg');
+const prog=document.getElementById('prog');
 let i=0, drawn={};
 
+/* pontos laterais (clicáveis, mas a navegação principal é a rolagem) */
 slides.forEach((_,k)=>{
-  const d=document.createElement('div');d.className='dot'+(k?'':' on');
-  d.onclick=()=>go(k);dots.appendChild(d);
+  const b=document.createElement('button');
+  b.className='dot'+(k?'':' on');
+  b.title='Slide '+(k+1);
+  b.onclick=()=>slides[k].scrollIntoView({behavior:'smooth'});
+  rail.appendChild(b);
 });
 
-function go(n){
-  if(n<0||n>=slides.length)return;
-  slides[i].classList.remove('active');
-  i=n;
-  slides[i].classList.add('active');
-  [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===i));
-  document.getElementById('pg').textContent=(i+1)+' / '+slides.length;
-  document.getElementById('prog').style.width=((i+1)/slides.length*100)+'%';
-  document.getElementById('prev').disabled=i===0;
-  document.getElementById('next').disabled=i===slides.length-1;
-  animate();
-}
-document.getElementById('prev').onclick=()=>go(i-1);
-document.getElementById('next').onclick=()=>go(i+1);
-document.addEventListener('keydown',e=>{
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(i+1)}
-  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1)}
-  if(e.key==='Home')go(0); if(e.key==='End')go(slides.length-1);
-});
+const pad=n=>String(n+1).padStart(2,'0');
 
-function animate(){
-  slides[i].querySelectorAll('.hbar').forEach((b,k)=>{
-    const f=b.querySelector('.f'); f.style.width='0';
-    setTimeout(()=>f.style.width=b.dataset.w+'%',80+k*55);
+/* --- observa qual slide está na tela --- */
+const io=new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    const k=slides.indexOf(e.target);
+    if(e.isIntersecting&&e.intersectionRatio>=.55){
+      e.target.classList.add('active');
+      i=k;
+      [...rail.children].forEach((d,x)=>d.classList.toggle('on',x===k));
+      pg.innerHTML='<b>'+pad(k)+'</b> / '+pad(slides.length-1);
+      cue.classList.toggle('hide',k===slides.length-1);
+      animate(k);
+    }
   });
-  if(i===1&&!drawn[1]){drawn[1]=1;setTimeout(faixa,120)}
-  if(i===3&&!drawn[3]){drawn[3]=1;setTimeout(()=>{dia();hora()},120)}
+},{root:deck,threshold:[.55]});
+slides.forEach(s=>io.observe(s));
+
+/* --- progresso da rolagem --- */
+deck.addEventListener('scroll',()=>{
+  const max=deck.scrollHeight-deck.clientHeight;
+  prog.style.width=(max?deck.scrollTop/max*100:0)+'%';
+},{passive:true});
+
+/* --- teclado como apoio --- */
+document.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(k==='Home'){e.preventDefault();slides[0].scrollIntoView({behavior:'smooth'})}
+  if(k==='End'){e.preventDefault();slides[slides.length-1].scrollIntoView({behavior:'smooth'})}
+});
+
+function animate(n){
+  slides[n].querySelectorAll('.hbar').forEach((b,k)=>{
+    const f=b.querySelector('.f');
+    if(f.dataset.done)return;
+    f.dataset.done=1;
+    setTimeout(()=>f.style.width=b.dataset.w+'%',120+k*60);
+  });
+  if(n===1&&!drawn[1]){drawn[1]=1;setTimeout(faixa,180)}
+  if(n===3&&!drawn[3]){drawn[3]=1;setTimeout(()=>{dia();hora()},180)}
 }
 
 function ctx(id){
@@ -362,7 +407,6 @@ function ctx(id){
   const x=c.getContext('2d');x.scale(p,p);
   return[x,r.width,r.height];
 }
-function txt(x,t,px,col,al='center'){x.font='600 '+px+'px Segoe UI,Arial';x.fillStyle=col;x.textAlign=al}
 
 /* ---- gráfico de barras verticais: faixas ---- */
 function faixa(){
@@ -372,7 +416,7 @@ function faixa(){
   x.strokeStyle=C2;x.lineWidth=1;
   for(let g=0;g<=4;g++){const y=pt+gh-gh*g/4;
     x.beginPath();x.moveTo(pl,y);x.lineTo(W-14,y);x.stroke();
-    txt(x,'',0,'','right');x.font='500 10px Segoe UI,Arial';x.fillStyle=G;x.textAlign='right';
+    x.font='500 10px Segoe UI,Arial';x.fillStyle=G;x.textAlign='right';
     x.fillText(Math.round(mx*g/4),pl-8,y+3);}
   const bw=gw/d.length*.55;
   d.forEach((it,k)=>{
@@ -397,16 +441,13 @@ function dia(){
     x.font='500 10px Segoe UI,Arial';x.fillStyle=G;x.textAlign='right';
     x.fillText((mx*g/3).toFixed(0)+'h',pl-7,y+3);}
   const px=k=>pl+gw*k/(d.length-1), py=v=>pt+gh-gh*v/mx;
-  // média
   x.setLineDash([5,4]);x.strokeStyle=R;x.lineWidth=1.5;
   x.beginPath();x.moveTo(pl,py(7.98));x.lineTo(W-12,py(7.98));x.stroke();x.setLineDash([]);
-  // área
   const gr=x.createLinearGradient(0,pt,0,pt+gh);
   gr.addColorStop(0,'rgba(19,56,107,.22)');gr.addColorStop(1,'rgba(19,56,107,0)');
   x.beginPath();x.moveTo(px(0),py(d[0][1]));
   d.forEach((it,k)=>x.lineTo(px(k),py(it[1])));
   x.lineTo(px(d.length-1),pt+gh);x.lineTo(px(0),pt+gh);x.closePath();x.fillStyle=gr;x.fill();
-  // linha
   x.beginPath();d.forEach((it,k)=>k?x.lineTo(px(k),py(it[1])):x.moveTo(px(k),py(it[1])));
   x.strokeStyle=A;x.lineWidth=2.4;x.stroke();
   d.forEach((it,k)=>{
@@ -441,8 +482,16 @@ function hora(){
   });
 }
 
-window.addEventListener('resize',()=>{drawn={};if(i===1)faixa();if(i===3){dia();hora()}});
-go(0);
+let rt;
+window.addEventListener('resize',()=>{
+  clearTimeout(rt);
+  rt=setTimeout(()=>{if(drawn[1])faixa();if(drawn[3]){dia();hora()}},200);
+});
+
+/* estado inicial */
+deck.scrollTop=0;
+slides[0].classList.add('active');
+pg.innerHTML='<b>01</b> / '+pad(slides.length-1);
 </script>
 </body>
 </html>
